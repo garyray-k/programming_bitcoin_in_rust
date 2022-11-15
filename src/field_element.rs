@@ -1,14 +1,16 @@
 use std::{fmt};
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Mul};
+
+use num::pow;
 
 #[derive(Debug)]
 pub struct FieldElement {
-    num: u64,
-    prime: u64
+    num: usize,
+    prime: usize
 }
 
 impl FieldElement {
-    pub fn new(num: u64, prime: u64) -> Self {
+    pub fn new(num: usize, prime: usize) -> Self {
         if num >= prime {
             panic!("Num {} not in field range 0 to {}", num, prime - 1);
         }
@@ -16,6 +18,11 @@ impl FieldElement {
             num,
             prime
         }
+    }
+
+    fn toThePowerOf(self, exponent: usize) -> Self {
+        let new_num = (pow(self.num, exponent)) % self.prime;
+        FieldElement { num: new_num, prime: self.prime }
     }
 }
 
@@ -57,17 +64,24 @@ impl Sub for FieldElement {
     }
 }
 
-// impl Mul for FieldElement {
-//     type Output = Self;
+impl Mul for FieldElement {
+    type Output = Self;
 
-//     fn mul(self, other: Self) -> Self {
-        
-//     }
-// }
+    fn mul(self, other: Self) -> Self {
+        if self.prime != other.prime {
+            panic!("Cannot multiply two numbers in different Field.");
+        }
+        let new_num = (self.num * other.num) % self.prime;
+        FieldElement { num: new_num, prime: self.prime }
+    }
+}
+
 
 
 #[cfg(test)]
 mod field_element_tests {
+    use num::{iter::Range, range};
+
     use super::*;
 
     #[test]
@@ -96,11 +110,42 @@ mod field_element_tests {
         assert!(b-c == a)
     }
 
-    // #[test]
-    // fn mul_works() {
-    //     let a = FieldElement::new(3, 13);
-    //     let b = FieldElement::new(12, 13);
-    //     let c = FieldElement::new(10, 13);
-    //     assert!(a*b == c)
-    // }
+    #[test]
+    fn mul_works() {
+        let a = FieldElement::new(3, 13);
+        let b = FieldElement::new(12, 13);
+        let c = FieldElement::new(10, 13);
+        assert!(a*b == c);
+        let a = FieldElement::new(24, 31);
+        let b = FieldElement::new(19, 31);
+        let c = FieldElement::new(22, 31);
+        assert!(a*b == c);
+        assert!(3%13==3);
+        assert!(8231%73829138==8231);
+    }
+
+    #[test]
+    fn pow_works() {
+        let a = FieldElement::new(3, 13);
+        let b = FieldElement::new(1, 13);
+        assert!(a.toThePowerOf(3)==b);
+        let a = FieldElement::new(17,31);
+        assert_eq!(a.toThePowerOf(3), FieldElement::new(15, 31));
+
+        let a = FieldElement::new(5, 31);
+        let b = FieldElement::new(18,31);
+        assert!((a.toThePowerOf(5) * b) == FieldElement::new(16, 31));
+    }
+
+    #[test]
+    fn print_field_for_k() {
+        let k: [usize; 5] = [1, 3, 7, 13, 18];
+        let prime: usize = 19;
+        for i in k {   
+            let j = 0..18;
+            for iterator in j {
+                println!("{} * {} % {} = {}", iterator, i, prime, (iterator*i % prime));
+            }
+        }
+    }
 }
