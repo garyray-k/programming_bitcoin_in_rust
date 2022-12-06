@@ -1,4 +1,5 @@
 pub mod field_element;
+pub mod point;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
