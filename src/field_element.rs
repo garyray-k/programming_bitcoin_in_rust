@@ -3,7 +3,7 @@ use std::ops::{Add, Sub, Mul, Div};
 
 use num::{pow, ToPrimitive};
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct FieldElement {
     num: usize,
     prime: usize
@@ -20,7 +20,22 @@ impl FieldElement {
         }
     }
 
-    fn to_the_power_of(self, exponent: isize) -> Self {
+    pub fn zero(prime: usize) -> Self {
+        Self {
+            num: 0,
+            prime
+        }
+    }
+
+    pub fn get_prime(self) -> usize {
+        self.prime
+    }
+
+    pub fn get_number(self) -> usize {
+        self.num
+    }
+
+    pub fn to_the_power_of(self, exponent: isize) -> Self {
         let exp: usize = (exponent % (self.prime - 1).to_isize().unwrap()).to_usize().unwrap();
         let new_num = (pow(self.num, exp)) % self.prime;
         FieldElement { num: new_num, prime: self.prime }
