@@ -1,6 +1,6 @@
 use std::{f64::INFINITY, ops::Add};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Point {
     x: f64,
     y: f64,
@@ -37,21 +37,28 @@ impl Add for Point {
             panic!("{}, {} is not on the curve for this Point.", other.x, other.y);
         }
 
-        // 1. Where the points are in a vertical line or using the identity point
         if self.x == INFINITY {
             return other;
         }
         if other.x == INFINITY {
             return self;
         }
-        if (self.y + other.y == 0.0) && (self.x == other.x) {
+        if ((self.y + other.y == 0.0) && (self.x == other.x)) || 
+            (self == other && self.y == 0.0) {
             return Point::new(INFINITY, INFINITY, self.a, self.b);
         }
 
-        self
-        // 2. Where the points are not in a vertical line, but are different
-        // 3. Where the two points are the same
+        let slope: f64;
+        if self == other {
+            slope = ((3.0 * self.x.powf(2.0)) + self.a as f64) / (2.0 * self.y);
+        } else {
+            slope = (other.y - self.y)/(other.x - self.x);
+        }
+    
+        let x = slope.powf(2.0) - self.x - other.x;
+        let y = slope * (self.x - x) - self.y;
 
+        return Point::new(x, y, self.a, self.b);
     }
 }
 
@@ -91,9 +98,26 @@ mod point_tests {
         let p2 = Point::new(-1.0, 1.0, 5, 7);
         let identity_point = Point::new(INFINITY, INFINITY, 5, 7);
         
+        // exercise 3
         assert!(p1 + identity_point == p1);
         assert!(p2 + identity_point == p2);
 
         assert!(p1 + p2 == identity_point);
+
+        // exercise 4 and 5
+        // For the curve y 2 = x 3 + 5x + 7, what is (2,5) + (–1,–1)?
+        let p1 = Point::new(2.0, 5.0, 5, 7);
+        let p2 = Point::new(-1.0, -1.0, 5, 7);
+        let expected = Point::new(3.0, -7.0, 5, 7);
+
+        assert_eq!(p1 + p2, expected);
+
+        // add to itself
+        let p1 = Point::new(-1.0, -1.0, 5, 7);
+        let p2 = Point::new(-1.0, -1.0, 5, 7);
+        let expected = Point::new(18.0, 77.0, 5, 7);
+        
+        assert_eq!(p1 + p2, expected);
+    
     }
 }
