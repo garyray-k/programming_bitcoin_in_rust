@@ -1,16 +1,23 @@
-use std::{f64::INFINITY, ops::Add};
+use std::{ops::Add};
+
+use crate::field_element::FieldElement;
 
 #[derive(Clone, Copy, Debug)]
 struct Point {
-    x: f64,
-    y: f64,
-    a: i8,
-    b: i8
+    x: Option<FieldElement>,
+    y: Option<FieldElement>,
+    a: FieldElement,
+    b: FieldElement
 }
 
 impl Point {
-    pub fn new(x: f64, y: f64, a: i8, b: i8) -> Self {
-        if (x == INFINITY) || (y == INFINITY) {
+    pub fn new(
+        x: Option<FieldElement>, 
+        y: Option<FieldElement>, 
+        a: FieldElement, 
+        b: FieldElement
+    ) -> Self {
+        if (x.is_none()) || (y.is_none()) {
             return Self {
                 x,
                 y,
@@ -18,8 +25,8 @@ impl Point {
                 b
             }
         }
-        if (y.powf(2.0)) != x.powf(3.0) + a as f64 * x + b as f64 {
-            panic!("{}, {} is not on the curve.", x, y);
+        if (y.unwrap().to_the_power_of(2)) != x.unwrap().to_the_power_of(3) + a * x.unwrap() + b {
+            panic!("{:?}, {:?} is not on the curve.", x, y);
         }
         Self {
             x,
@@ -34,29 +41,40 @@ impl Add for Point {
     type Output = Self;
     fn add(self, other: Self) -> Self {
         if (other.a != self.a) || (other.b != self.b) {
-            panic!("{}, {} is not on the curve for this Point.", other.x, other.y);
+            panic!("{:?}, {:?} is not on the curve for this Point.", other.x, other.y);
         }
 
-        if self.x == INFINITY {
+        if self.x.is_none() || self.y.is_none() {
             return other;
         }
-        if other.x == INFINITY {
+        if other.x.is_none() || other.y.is_none() {
             return self;
         }
-        if ((self.y + other.y == 0.0) && (self.x == other.x)) || 
-            (self == other && self.y == 0.0) {
-            return Point::new(INFINITY, INFINITY, self.a, self.b);
+        let self_x = self.x.unwrap();
+        let self_y = self.y.unwrap();
+        let other_x = other.x.unwrap();
+        let other_y = other.y.unwrap();
+        let zero = FieldElement::zero(self_x.get_prime());
+
+        if ((self_y + other_y == zero) && (self_x == other_x)) || 
+            (self == other && self_y == zero) {
+            return Point::new(None, None, self.a, self.b);
         }
 
-        let slope: f64;
+        let slope: usize;
         if self == other {
-            slope = ((3.0 * self.x.powf(2.0)) + self.a as f64) / (2.0 * self.y);
+            slope = ((3 * self_x.to_the_power_of(2).get_number()) + self.a.get_number()) 
+                    / (2 * self_y.get_number());
         } else {
-            slope = (other.y - self.y)/(other.x - self.x);
+            slope = ((other_y - self_y)
+                    /(other_x - self_x)).get_number();
         }
     
-        let x = slope.powf(2.0) - self.x - other.x;
-        let y = slope * (self.x - x) - self.y;
+        let x = slope.pow(2) - self_x.get_number() - other_x.get_number();
+        let y = slope * (self_x.get_number() - x) - self_y.get_number();
+
+        let x = Some(FieldElement::new(x, self_x.get_prime()));
+        let y = Some(FieldElement::new(y, self_y.get_prime()));
 
         return Point::new(x, y, self.a, self.b);
     }
@@ -76,46 +94,118 @@ mod point_tests {
 
     use super::*;
 
+    const PRIME: usize = 191;
+
     #[test]
     #[should_panic]
     fn bad_point() {
-        let b = Point::new(-1.0, -2.0, 5, 7);
+        let _b = Point::new(
+            Some(FieldElement::new(1,PRIME)), 
+            Some(FieldElement::new(1,PRIME)), 
+            FieldElement::new(5, PRIME),
+            FieldElement::new(7, PRIME)
+        );
     }
 
     #[test]
     fn eq_works() {
-        let a = Point::new(-1.0, -1.0, 5, 7);
-        let b = Point::new(-1.0, -1.0, 5, 7);
-        let c = Point::new(18.0, 77.0, 5, 7);
+        let a = Point::new(
+            Some(FieldElement::new(1, PRIME)), 
+            Some(FieldElement::new(1, PRIME)), 
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME)
+        );
+        let b = Point::new(
+            Some(FieldElement::new(1, PRIME)), 
+            Some(FieldElement::new(1, PRIME)), 
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME)
+        );
+        let c = Point::new(
+            Some(FieldElement::new(18, PRIME)), 
+            Some(FieldElement::new(77, PRIME)), 
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME)
+        );
         
         assert!(a == b);
         assert!(a != c);
     }
 
     #[test]
-    fn add_test() {
-        let p1 = Point::new(-1.0, -1.0, 5, 7);
-        let p2 = Point::new(-1.0, 1.0, 5, 7);
-        let identity_point = Point::new(INFINITY, INFINITY, 5, 7);
+    fn add_identity_test() {
+        let p1 = Point::new(
+            Some(FieldElement::new(1, PRIME)), 
+            Some(FieldElement::new(1, PRIME)), 
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME)
+        );
+        let p2 = Point::new(
+            Some(FieldElement::new(1, PRIME)), 
+            Some(FieldElement::new(1, PRIME)), 
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME)
+        );
+        let identity_point = Point::new(
+            None, 
+            None, 
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME)
+        );
         
         // exercise 3
         assert!(p1 + identity_point == p1);
         assert!(p2 + identity_point == p2);
-
         assert!(p1 + p2 == identity_point);
+    }
 
+    #[test]
+    fn add_test() {
         // exercise 4 and 5
         // For the curve y 2 = x 3 + 5x + 7, what is (2,5) + (–1,–1)?
-        let p1 = Point::new(2.0, 5.0, 5, 7);
-        let p2 = Point::new(-1.0, -1.0, 5, 7);
-        let expected = Point::new(3.0, -7.0, 5, 7);
+        let p1 = Point::new(
+            Some(FieldElement::new(1, PRIME)), 
+            Some(FieldElement::new(1, PRIME)), 
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME)
+        );
+        let p2 = Point::new(
+            Some(FieldElement::new(1, PRIME)),
+            Some(FieldElement::new(1, PRIME)), 
+            FieldElement::new(5, PRIME),
+            FieldElement::new(7, PRIME)
+        );
+        let expected = Point::new(
+            Some(FieldElement::new(3, PRIME)), 
+            Some(FieldElement::new(7, PRIME)), 
+            FieldElement::new(5, PRIME),
+            FieldElement::new(7, PRIME)
+        );
 
         assert_eq!(p1 + p2, expected);
+    }
 
+    #[test]
+    fn add_self_test() {
         // add to itself
-        let p1 = Point::new(-1.0, -1.0, 5, 7);
-        let p2 = Point::new(-1.0, -1.0, 5, 7);
-        let expected = Point::new(18.0, 77.0, 5, 7);
+        let p1 = Point::new(
+            Some(FieldElement::new(1, PRIME)), 
+            Some(FieldElement::new(1, PRIME)), 
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME)
+        );
+        let p2 = Point::new(
+            Some(FieldElement::new(1, PRIME)), 
+            Some(FieldElement::new(1, PRIME)), 
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME)
+        );
+        let expected = Point::new(
+            Some(FieldElement::new(18, PRIME)), 
+            Some(FieldElement::new(77, PRIME)),
+            FieldElement::new(5, PRIME), 
+            FieldElement::new(7, PRIME),
+        );
         
         assert_eq!(p1 + p2, expected);
     
