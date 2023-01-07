@@ -1,12 +1,12 @@
-use std::{fmt};
-use std::ops::{Add, Sub, Mul, Div};
+use std::fmt;
+use std::ops::{Add, Div, Mul, Sub};
 
 use num::{pow, ToPrimitive};
 
 #[derive(Debug, Copy, Clone)]
 pub struct FieldElement {
     num: usize,
-    prime: usize
+    prime: usize,
 }
 
 impl FieldElement {
@@ -14,17 +14,11 @@ impl FieldElement {
         if num >= prime {
             panic!("Num {} not in field range 0 to {}", num, prime - 1);
         }
-        Self {
-            num,
-            prime
-        }
+        Self { num, prime }
     }
 
     pub fn zero(prime: usize) -> Self {
-        Self {
-            num: 0,
-            prime
-        }
+        Self { num: 0, prime }
     }
 
     pub fn get_prime(self) -> usize {
@@ -36,9 +30,14 @@ impl FieldElement {
     }
 
     pub fn to_the_power_of(self, exponent: isize) -> Self {
-        let exp: usize = (exponent % (self.prime - 1).to_isize().unwrap()).to_usize().unwrap();
+        let exp: usize = (exponent % (self.prime - 1).to_isize().unwrap())
+            .to_usize()
+            .unwrap();
         let new_num = (pow(self.num, exp)) % self.prime;
-        FieldElement { num: new_num, prime: self.prime }
+        FieldElement {
+            num: new_num,
+            prime: self.prime,
+        }
     }
 }
 
@@ -49,7 +48,6 @@ impl PartialEq for FieldElement {
 }
 
 impl Eq for FieldElement {}
-
 
 impl fmt::Display for FieldElement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -64,7 +62,10 @@ impl Add for FieldElement {
             panic!("Cannot add two numbers in different Field.");
         }
         let new_num = (self.num + other.num) % self.prime;
-        FieldElement { num: new_num, prime: self.prime }
+        FieldElement {
+            num: new_num,
+            prime: self.prime,
+        }
     }
 }
 
@@ -76,7 +77,10 @@ impl Sub for FieldElement {
             panic!("Cannot add two numbers in different Field.");
         }
         let new_num = (self.num - other.num) % self.prime;
-        FieldElement { num: new_num, prime: self.prime }
+        FieldElement {
+            num: new_num,
+            prime: self.prime,
+        }
     }
 }
 
@@ -88,7 +92,10 @@ impl Mul for FieldElement {
             panic!("Cannot multiply two numbers in different Order.");
         }
         let new_num = (self.num * other.num) % self.prime;
-        FieldElement { num: new_num, prime: self.prime }
+        FieldElement {
+            num: new_num,
+            prime: self.prime,
+        }
     }
 }
 
@@ -99,7 +106,8 @@ impl Div for FieldElement {
         if self.prime != divisor.prime {
             panic!("Cannot divide two numbers in different Order.");
         }
-        let new_num = self.num * mod_exp::mod_exp(divisor.num, self.prime-2, self.prime) % self.prime;
+        let new_num =
+            self.num * mod_exp::mod_exp(divisor.num, self.prime - 2, self.prime) % self.prime;
         FieldElement::new(new_num, self.prime)
     }
 }
@@ -126,7 +134,7 @@ mod field_element_tests {
         let a = FieldElement::new(7, 13);
         let b = FieldElement::new(12, 13);
         let c = FieldElement::new(6, 13);
-        assert!(a+b == c);
+        assert!(a + b == c);
     }
 
     #[test]
@@ -134,7 +142,7 @@ mod field_element_tests {
         let a = FieldElement::new(2, 19);
         let b = FieldElement::new(11, 19);
         let c = FieldElement::new(9, 19);
-        assert!(b-c == a)
+        assert!(b - c == a)
     }
 
     #[test]
@@ -142,25 +150,25 @@ mod field_element_tests {
         let a = FieldElement::new(3, 13);
         let b = FieldElement::new(12, 13);
         let c = FieldElement::new(10, 13);
-        assert!(a*b == c);
+        assert!(a * b == c);
         let a = FieldElement::new(24, 31);
         let b = FieldElement::new(19, 31);
         let c = FieldElement::new(22, 31);
-        assert!(a*b == c);
-        assert!(3%13==3);
-        assert!(8231%73829138==8231);
+        assert!(a * b == c);
+        assert!(3 % 13 == 3);
+        assert!(8231 % 73829138 == 8231);
     }
 
     #[test]
     fn pow_works() {
         let a = FieldElement::new(3, 13);
         let b = FieldElement::new(1, 13);
-        assert!(a.to_the_power_of(3)==b);
-        let a = FieldElement::new(17,31);
+        assert!(a.to_the_power_of(3) == b);
+        let a = FieldElement::new(17, 31);
         assert_eq!(a.to_the_power_of(3), FieldElement::new(15, 31));
 
         let a = FieldElement::new(5, 31);
-        let b = FieldElement::new(18,31);
+        let b = FieldElement::new(18, 31);
         assert!((a.to_the_power_of(5) * b) == FieldElement::new(16, 31));
 
         let a = FieldElement::new(7, 13);
@@ -172,10 +180,16 @@ mod field_element_tests {
     fn print_field_for_k() {
         let k: [usize; 5] = [1, 3, 7, 13, 18];
         let prime: usize = 19;
-        for i in k {   
+        for i in k {
             let j = 0..18;
             for iterator in j {
-                println!("{} * {} % {} = {}", iterator, i, prime, (iterator*i % prime));
+                println!(
+                    "{} * {} % {} = {}",
+                    iterator,
+                    i,
+                    prime,
+                    (iterator * i % prime)
+                );
             }
         }
     }
@@ -185,6 +199,6 @@ mod field_element_tests {
         let a = FieldElement::new(2, 19);
         let b = FieldElement::new(7, 19);
         let c = FieldElement::new(3, 19);
-        assert!(c == a/b)
+        assert!(c == a / b)
     }
 }
