@@ -1,43 +1,58 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Sub};
 
-use num::{pow, ToPrimitive};
+use num::pow;
 
 #[derive(Debug, Copy, Clone)]
 pub struct FieldElement {
-    num: usize,
-    prime: usize,
+    num: u64,
+    prime: u64,
 }
 
 impl FieldElement {
-    pub fn new(num: usize, prime: usize) -> Self {
+    pub fn new(num: u64, prime: u64) -> Self {
         if num >= prime {
             panic!("Num {} not in field range 0 to {}", num, prime - 1);
         }
         Self { num, prime }
     }
 
-    pub fn zero(prime: usize) -> Self {
+    pub fn zero(prime: u64) -> Self {
         Self { num: 0, prime }
     }
 
-    pub fn get_prime(self) -> usize {
+    pub fn get_prime(self) -> u64 {
         self.prime
     }
 
-    pub fn get_number(self) -> usize {
+    pub fn get_number(self) -> u64 {
         self.num
     }
 
-    pub fn to_the_power_of(self, exponent: isize) -> Self {
-        let exp: usize = (exponent % (self.prime - 1).to_isize().unwrap())
-            .to_usize()
-            .unwrap();
-        let new_num = (pow(self.num, exp)) % self.prime;
+    pub fn to_the_power_of(self, exponent: u64) -> Self {
+        let exp = (exponent % (self.prime - 1)) as u64;
+        let new_num = Self::mod_pow(self.num, exp, self.prime);
         FieldElement {
             num: new_num,
             prime: self.prime,
         }
+    }
+
+    // credit to https://rob.co.bb/posts/2019-02-10-modular-exponentiation-in-rust/
+    fn mod_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
+        if modulus == 1 {
+            return 0;
+        }
+        let mut result = 1;
+        base = base % modulus;
+        while exp > 0 {
+            if exp % 2 == 1 {
+                result = result * base % modulus;
+            }
+            exp = exp >> 1;
+            base = base * base % modulus
+        }
+        result
     }
 }
 
@@ -170,10 +185,6 @@ mod field_element_tests {
         let a = FieldElement::new(5, 31);
         let b = FieldElement::new(18, 31);
         assert!((a.to_the_power_of(5) * b) == FieldElement::new(16, 31));
-
-        let a = FieldElement::new(7, 13);
-        let b = FieldElement::new(8, 13);
-        assert!(a.to_the_power_of(-15) == b)
     }
 
     #[test]
