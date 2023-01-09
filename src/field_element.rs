@@ -91,9 +91,10 @@ impl Sub for FieldElement {
         if self.prime != other.prime {
             panic!("Cannot add two numbers in different Field.");
         }
-        let new_num = (self.num - other.num) % self.prime;
+        // Probably not the best approach.
+        let new_num = (self.num as i64 - other.num as i64) % self.prime as i64;
         FieldElement {
-            num: new_num,
+            num: new_num as u64,
             prime: self.prime,
         }
     }
