@@ -203,8 +203,8 @@ mod point_tests {
             FieldElement::new(7, PRIME),
         );
         let expected = Point::new(
-            Some(FieldElement::new(3, PRIME)),
-            Some(FieldElement::new(7, PRIME)),
+            Some(FieldElement::new(190, PRIME)),
+            Some(FieldElement::new(31, PRIME)),
             FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
