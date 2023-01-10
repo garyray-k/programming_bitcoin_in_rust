@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, AddAssign};
 
 use crate::field_element::FieldElement;
 
@@ -24,6 +24,16 @@ impl Point {
             panic!("{:?}, {:?} is not on the curve.", x, y);
         }
         Self { x, y, a, b }
+    }
+
+    pub fn multiply_by(self, multiple: u64) -> Point {
+        let mut result = self;
+        let mut i = 2;
+        while i <= multiple {
+            result += self;
+            i += 1;
+        }
+        result
     }
 }
 
@@ -71,6 +81,12 @@ impl Add for Point {
         let y = Some(y);
 
         return Point::new(x, y, self.a, self.b);
+    }
+}
+
+impl AddAssign for Point {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = self.clone() + rhs
     }
 }
 
@@ -216,24 +232,43 @@ mod point_tests {
     fn add_self_test() {
         // add to itself
         let p1 = Point::new(
-            Some(FieldElement::new(1, PRIME)),
-            Some(FieldElement::new(1, PRIME)),
-            FieldElement::new(5, PRIME),
+            Some(FieldElement::new(57, PRIME)),
+            Some(FieldElement::new(180, PRIME)),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
         let p2 = Point::new(
-            Some(FieldElement::new(1, PRIME)),
-            Some(FieldElement::new(1, PRIME)),
-            FieldElement::new(5, PRIME),
+            Some(FieldElement::new(57, PRIME)),
+            Some(FieldElement::new(180, PRIME)),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
         let expected = Point::new(
-            Some(FieldElement::new(18, PRIME)),
-            Some(FieldElement::new(77, PRIME)),
-            FieldElement::new(5, PRIME),
+            Some(FieldElement::new(156, PRIME)),
+            Some(FieldElement::new(38, PRIME)),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
 
         assert_eq!(p1 + p2, expected);
+    }
+
+    #[test]
+    fn scalar_multiple() {
+        let point = Point::new(
+            Some(FieldElement::new(47, 223)),
+            Some(FieldElement::new(71, 223)),
+            FieldElement::new(0, 223),
+            FieldElement::new(7, 223),
+        );
+        let expected = Point::new(
+            Some(FieldElement::new(139, 223)),
+            Some(FieldElement::new(137, 223)),
+            FieldElement::new(0, 223),
+            FieldElement::new(7, 223),
+        );
+        let result = point.multiply_by(6);
+
+        assert_eq!(expected, result)
     }
 }
