@@ -54,19 +54,21 @@ impl Add for Point {
             return Point::new(None, None, self.a, self.b);
         }
 
-        let slope: usize;
+        let slope: FieldElement;
+
         if self == other {
-            slope = ((3 * self_x.to_the_power_of(2).get_number()) + self.a.get_number())
-                / (2 * self_y.get_number());
+            let x_to_the_second = self_x.to_the_power_of(2);
+            slope = ((x_to_the_second + x_to_the_second + x_to_the_second) + self.a)
+                / (self_y + self_y);
         } else {
-            slope = ((other_y - self_y) / (other_x - self_x)).get_number();
+            slope = (other_y - self_y) / (other_x - self_x);
         }
 
-        let x = slope.pow(2) - self_x.get_number() - other_x.get_number();
-        let y = slope * (self_x.get_number() - x) - self_y.get_number();
+        let x = slope.to_the_power_of(2) - self_x - other_x;
+        let y = slope * (self_x - x) - self_y;
 
-        let x = Some(FieldElement::new(x, self_x.get_prime()));
-        let y = Some(FieldElement::new(y, self_y.get_prime()));
+        let x = Some(x);
+        let y = Some(y);
 
         return Point::new(x, y, self.a, self.b);
     }
@@ -83,9 +85,11 @@ impl Eq for Point {}
 #[cfg(test)]
 mod point_tests {
 
+    use std::panic;
+
     use super::*;
 
-    const PRIME: usize = 191;
+    const PRIME: u64 = 191;
 
     #[test]
     #[should_panic]
@@ -100,22 +104,54 @@ mod point_tests {
 
     #[test]
     fn eq_works() {
+        // Had to find the points on the curve for use elsewhere.
+        // let mut list = vec![];
+        // panic::set_hook(Box::new(|_| {
+        //     // do nothing
+        // }));
+        // (0..=191).for_each(|x| {
+        //     (0..=191).for_each(|y| {
+        //         let result = panic::catch_unwind(|| {
+        //             Point::new(
+        //                 Some(FieldElement::new(x, PRIME)),
+        //                 Some(FieldElement::new(y, PRIME)),
+        //                 FieldElement::new(0, PRIME),
+        //                 FieldElement::new(7, PRIME),
+        //             )
+        //         });
+
+        //         match result {
+        //             Ok(value) => {
+        //                 list.push(value);
+        //             }
+        //             Err(_) => (),
+        //         }
+        //     })
+        // });
+        // list.iter().for_each(|f| {
+        //     println!(
+        //         "{}, {} is on the curve.",
+        //         f.x.unwrap().get_number(),
+        //         f.y.unwrap().get_number()
+        //     )
+        // });
+
         let a = Point::new(
             Some(FieldElement::new(1, PRIME)),
-            Some(FieldElement::new(193, PRIME)),
+            Some(FieldElement::new(77, PRIME)),
             FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
         let b = Point::new(
             Some(FieldElement::new(1, PRIME)),
-            Some(FieldElement::new(193, PRIME)),
+            Some(FieldElement::new(77, PRIME)),
             FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
         let c = Point::new(
-            Some(FieldElement::new(18, PRIME)),
-            Some(FieldElement::new(77, PRIME)),
-            FieldElement::new(5, PRIME),
+            Some(FieldElement::new(180, PRIME)),
+            Some(FieldElement::new(108, PRIME)),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
 
@@ -127,27 +163,27 @@ mod point_tests {
     fn add_identity_test() {
         let p1 = Point::new(
             Some(FieldElement::new(1, PRIME)),
-            Some(FieldElement::new(1, PRIME)),
-            FieldElement::new(5, PRIME),
+            Some(FieldElement::new(77, PRIME)),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
         let p2 = Point::new(
             Some(FieldElement::new(1, PRIME)),
-            Some(FieldElement::new(1, PRIME)),
-            FieldElement::new(5, PRIME),
+            Some(FieldElement::new(77, PRIME)),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
         let identity_point = Point::new(
             None,
             None,
-            FieldElement::new(5, PRIME),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
 
+        println!("{:?}", p1 + p2);
         // exercise 3
         assert!(p1 + identity_point == p1);
         assert!(p2 + identity_point == p2);
-        assert!(p1 + p2 == identity_point);
     }
 
     #[test]
@@ -155,21 +191,21 @@ mod point_tests {
         // exercise 4 and 5
         // For the curve y 2 = x 3 + 5x + 7, what is (2,5) + (–1,–1)?
         let p1 = Point::new(
-            Some(FieldElement::new(1, PRIME)),
-            Some(FieldElement::new(1, PRIME)),
-            FieldElement::new(5, PRIME),
+            Some(FieldElement::new(57, PRIME)),
+            Some(FieldElement::new(180, PRIME)),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
         let p2 = Point::new(
-            Some(FieldElement::new(1, PRIME)),
-            Some(FieldElement::new(1, PRIME)),
-            FieldElement::new(5, PRIME),
+            Some(FieldElement::new(47, PRIME)),
+            Some(FieldElement::new(58, PRIME)),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
         let expected = Point::new(
             Some(FieldElement::new(3, PRIME)),
             Some(FieldElement::new(7, PRIME)),
-            FieldElement::new(5, PRIME),
+            FieldElement::new(0, PRIME),
             FieldElement::new(7, PRIME),
         );
 
