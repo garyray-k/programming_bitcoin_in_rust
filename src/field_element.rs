@@ -1,8 +1,6 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Sub};
 
-use num::pow;
-
 #[derive(Debug, Copy, Clone)]
 pub struct FieldElement {
     num: u64,
@@ -91,8 +89,11 @@ impl Sub for FieldElement {
         if self.prime != other.prime {
             panic!("Cannot add two numbers in different Field.");
         }
-        // Probably not the best approach.
-        let new_num = (self.num as i64 - other.num as i64) % self.prime as i64;
+
+        let difference: i64 = self.num as i64 - other.num as i64;
+        // Use .rem_euclid() because of how Rust handles negative numbers and modulo
+        let new_num = difference.rem_euclid(self.prime as i64);
+
         FieldElement {
             num: new_num as u64,
             prime: self.prime,
@@ -186,24 +187,6 @@ mod field_element_tests {
         let a = FieldElement::new(5, 31);
         let b = FieldElement::new(18, 31);
         assert!((a.to_the_power_of(5) * b) == FieldElement::new(16, 31));
-    }
-
-    #[test]
-    fn print_field_for_k() {
-        let k: [usize; 5] = [1, 3, 7, 13, 18];
-        let prime: usize = 19;
-        for i in k {
-            let j = 0..18;
-            for iterator in j {
-                println!(
-                    "{} * {} % {} = {}",
-                    iterator,
-                    i,
-                    prime,
-                    (iterator * i % prime)
-                );
-            }
-        }
     }
 
     #[test]
