@@ -1,4 +1,5 @@
 {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  "editor.formatOnSave": true,
+  "prettier.enable": false,
+  "editor.defaultFormatter": "rust-lang.rust-analyzer"
 }
