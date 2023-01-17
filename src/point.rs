@@ -1,3 +1,4 @@
+use std::fmt;
 use std::ops::{Add, AddAssign};
 
 use crate::field_element::FieldElement;
@@ -26,14 +27,38 @@ impl Point {
         Self { x, y, a, b }
     }
 
-    pub fn multiply_by(self, multiple: u64) -> Point {
-        let mut result = self;
-        let mut i = 2;
-        while i <= multiple {
-            result += self;
-            i += 1;
+    pub fn multiply_by(self, coefficient: u64) -> Point {
+        let mut coef = coefficient;
+        let mut current = self;
+        let mut result =
+            Self::infinity_point(self.a.get_number(), self.b.get_number(), self.a.get_prime());
+        while coef != 0 {
+            if coef & 1 == 1 {
+                result = result + current;
+            }
+            current = current + current;
+            coef >>= 1;
         }
         result
+    }
+
+    fn infinity_point(a: u64, b: u64, prime: u64) -> Point {
+        Point {
+            x: None,
+            y: None,
+            a: FieldElement::new(a, prime),
+            b: FieldElement::new(b, prime),
+        }
+    }
+}
+
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Point: {{\n\t x:{:?}\n\t y:{:?}\n\t a:{:?}\n\t b:{:?}\n }}",
+            self.x, self.y, self.a, self.b
+        )
     }
 }
 
@@ -100,8 +125,6 @@ impl Eq for Point {}
 
 #[cfg(test)]
 mod point_tests {
-
-    use std::panic;
 
     use super::*;
 
@@ -269,7 +292,22 @@ mod point_tests {
         );
         let result = point.multiply_by(6);
 
-        assert_eq!(expected, result)
+        assert_eq!(expected, result);
+
+        let point = Point::new(
+            Some(FieldElement::new(15, 223)),
+            Some(FieldElement::new(86, 223)),
+            FieldElement::new(0, 223),
+            FieldElement::new(7, 223),
+        );
+        let expected = Point::new(
+            None,
+            None,
+            FieldElement::new(0, 223),
+            FieldElement::new(7, 223),
+        );
+
+        assert_eq!(point.multiply_by(7), expected)
     }
 
     #[test]
@@ -285,6 +323,7 @@ mod point_tests {
         let mut order: u32 = 0;
         let mut sum = generation_point.clone();
         loop {
+            println!("{:?}", sum);
             order += 1;
             sum = generation_point + sum;
             if sum.x.is_none() && sum.y.is_none() {
