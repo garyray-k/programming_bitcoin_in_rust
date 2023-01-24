@@ -3,7 +3,7 @@ use std::ops::{Add, AddAssign};
 
 use crate::field_element::FieldElement;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 struct Point {
     x: Option<FieldElement>,
     y: Option<FieldElement>,

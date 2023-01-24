@@ -1,33 +1,38 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Sub};
 
-#[derive(Debug, Copy, Clone)]
+use num::{BigUint, Zero};
+
+#[derive(Debug, Clone)]
 pub struct FieldElement {
-    num: u64,
-    prime: u64,
+    num: BigUint,
+    prime: BigUint,
 }
 
 impl FieldElement {
-    pub fn new(num: u64, prime: u64) -> Self {
+    pub fn new(num: BigUint, prime: BigUint) -> Self {
         if num >= prime {
-            panic!("Num {} not in field range 0 to {}", num, prime - 1);
+            panic!("Num {} not in field range", num);
         }
         Self { num, prime }
     }
 
-    pub fn zero(prime: u64) -> Self {
-        Self { num: 0, prime }
+    pub fn zero(prime: BigUint) -> Self {
+        Self {
+            num: BigUint::zero(),
+            prime,
+        }
     }
 
-    pub fn get_prime(self) -> u64 {
+    pub fn get_prime(self) -> BigUint {
         self.prime
     }
 
-    pub fn get_number(self) -> u64 {
+    pub fn get_number(self) -> BigUint {
         self.num
     }
 
-    pub fn to_the_power_of(self, exponent: u64) -> Self {
+    pub fn to_the_power_of(self, exponent: BigUint) -> Self {
         let exp = (exponent % (self.prime - 1)) as u64;
         let new_num = Self::mod_pow(self.num, exp, self.prime);
         FieldElement {
@@ -37,7 +42,7 @@ impl FieldElement {
     }
 
     // credit to https://rob.co.bb/posts/2019-02-10-modular-exponentiation-in-rust/
-    fn mod_pow(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
+    fn mod_pow(mut base: BigUint, mut exp: BigUint, modulus: BigUint) -> BigUint {
         if modulus == 1 {
             return 0;
         }
