@@ -1,5 +1,6 @@
 pub mod field_element;
 pub mod point;
+pub mod secp256k1;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
