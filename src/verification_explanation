@@ -1,0 +1,22 @@
+STATIC:
+
+e = private key (single 256-bit number)
+P = Public key (x,y coordinate, each 256bit)
+e * G = P where G is the generator point of secp256k1
+
+SIGNATURE-RELATED:
+
+k * G = R where k is random 256bit number
+Rx is the only one we care about.
+r = Rx
+u,v - cannot be 0, caluculated using s
+u = z/s
+v = r/s
+
+HASH-RELATED:
+
+z = signature hash (hash256 aka 2x SHA256) on the document
+s = (z + re)/k (calculate u, v using s)
+Verification algo
+uG + vP = (r,y)
+
