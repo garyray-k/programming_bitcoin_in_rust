@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Sub};
 
-use num::{BigUint, Zero};
+use num::{BigInt, BigUint, FromPrimitive, One, Zero};
 
 #[derive(Debug, Clone)]
 pub struct FieldElement {
@@ -33,8 +33,8 @@ impl FieldElement {
     }
 
     pub fn to_the_power_of(self, exponent: BigUint) -> Self {
-        let exp = (exponent % (self.prime - 1)) as u64;
-        let new_num = Self::mod_pow(self.num, exp, self.prime);
+        let exp = exponent % (self.prime - BigUint::from_u64(1u64).unwrap());
+        let new_num = Self::mod_pow(self.num, exp.into(), self.prime);
         FieldElement {
             num: new_num,
             prime: self.prime,
@@ -43,13 +43,13 @@ impl FieldElement {
 
     // credit to https://rob.co.bb/posts/2019-02-10-modular-exponentiation-in-rust/
     fn mod_pow(mut base: BigUint, mut exp: BigUint, modulus: BigUint) -> BigUint {
-        if modulus == 1 {
-            return 0;
+        if modulus == BigUint::one() {
+            return BigUint::zero();
         }
-        let mut result = 1;
+        let mut result = BigUint::one();
         base = base % modulus;
-        while exp > 0 {
-            if exp % 2 == 1 {
+        while exp > BigUint::zero() {
+            if exp % BigUint::from_u64(2u64).unwrap() == BigUint::one() {
                 result = result * base % modulus;
             }
             exp = exp >> 1;
@@ -92,16 +92,23 @@ impl Sub for FieldElement {
 
     fn sub(self, other: Self) -> Self {
         if self.prime != other.prime {
-            panic!("Cannot add two numbers in different Field.");
+            panic!("Cannot add two numbers in different Fields.");
         }
 
-        let difference: i64 = self.num as i64 - other.num as i64;
-        // Use .rem_euclid() because of how Rust handles negative numbers and modulo
-        let new_num = difference.rem_euclid(self.prime as i64);
-
-        FieldElement {
-            num: new_num as u64,
-            prime: self.prime,
+        let difference: BigInt = BigInt::from(self.num) - BigInt::from(other.num);
+        let big_prime = BigInt::from(self.prime);
+        let remainder = difference % big_prime;
+        if remainder < BigInt::zero() {
+            let new_number = remainder + big_prime;
+            FieldElement {
+                num: new_number.try_into().unwrap(),
+                prime: self.prime,
+            }
+        } else {
+            FieldElement {
+                num: remainder.try_into().unwrap(),
+                prime: self.prime,
+            }
         }
     }
 }
@@ -128,8 +135,12 @@ impl Div for FieldElement {
         if self.prime != divisor.prime {
             panic!("Cannot divide two numbers in different Order.");
         }
-        let new_num =
-            self.num * mod_exp::mod_exp(divisor.num, self.prime - 2, self.prime) % self.prime;
+        let new_num = self.num
+            * divisor.num.modpow(
+                &(self.prime - BigUint::from_u64(2u64).unwrap()),
+                &self.prime,
+            )
+            % self.prime;
         FieldElement::new(new_num, self.prime)
     }
 }
@@ -143,39 +154,39 @@ mod field_element_tests {
 
     #[test]
     fn eq_works() {
-        let a = FieldElement::new(7, 13);
-        let b = FieldElement::new(6, 13);
+        let a = FieldElement::new(7u64.into(), 13u64.into());
+        let b = FieldElement::new(6u64.into(), 13u64.into());
         assert!(a != b);
-        let a = FieldElement::new(7, 13);
-        let c = FieldElement::new(7, 13);
+        let a = FieldElement::new(7u64.into(), 13u64.into());
+        let c = FieldElement::new(7u64.into(), 13u64.into());
         assert!(a == c);
     }
 
     #[test]
     fn add_works() {
-        let a = FieldElement::new(7, 13);
-        let b = FieldElement::new(12, 13);
-        let c = FieldElement::new(6, 13);
+        let a = FieldElement::new(7u64.into(), 13u64.into());
+        let b = FieldElement::new(12u64.into(), 13u64.into());
+        let c = FieldElement::new(6u64.into(), 13u64.into());
         assert!(a + b == c);
     }
 
     #[test]
     fn sub_works() {
-        let a = FieldElement::new(2, 19);
-        let b = FieldElement::new(11, 19);
-        let c = FieldElement::new(9, 19);
+        let a = FieldElement::new(2u64.into(), 19u64.into());
+        let b = FieldElement::new(11u64.into(), 19u64.into());
+        let c = FieldElement::new(9u64.into(), 19u64.into());
         assert!(b - c == a)
     }
 
     #[test]
     fn mul_works() {
-        let a = FieldElement::new(3, 13);
-        let b = FieldElement::new(12, 13);
-        let c = FieldElement::new(10, 13);
+        let a = FieldElement::new(3u64.into(), 13u64.into());
+        let b = FieldElement::new(12u64.into(), 13u64.into());
+        let c = FieldElement::new(10u64.into(), 13u64.into());
         assert!(a * b == c);
-        let a = FieldElement::new(24, 31);
-        let b = FieldElement::new(19, 31);
-        let c = FieldElement::new(22, 31);
+        let a = FieldElement::new(24u64.into(), 31u64.into());
+        let b = FieldElement::new(19u64.into(), 31u64.into());
+        let c = FieldElement::new(22u64.into(), 31u64.into());
         assert!(a * b == c);
         assert!(3 % 13 == 3);
         assert!(8231 % 73829138 == 8231);
@@ -183,22 +194,27 @@ mod field_element_tests {
 
     #[test]
     fn pow_works() {
-        let a = FieldElement::new(3, 13);
-        let b = FieldElement::new(1, 13);
-        assert!(a.to_the_power_of(3) == b);
-        let a = FieldElement::new(17, 31);
-        assert_eq!(a.to_the_power_of(3), FieldElement::new(15, 31));
+        let a = FieldElement::new(3u64.into(), 13u64.into());
+        let b = FieldElement::new(1u64.into(), 13u64.into());
+        assert!(a.to_the_power_of(3u64.into()) == b);
+        let a = FieldElement::new(17u64.into(), 31u64.into());
+        assert_eq!(
+            a.to_the_power_of(3u64.into()),
+            FieldElement::new(15u64.into(), 31u64.into())
+        );
 
-        let a = FieldElement::new(5, 31);
-        let b = FieldElement::new(18, 31);
-        assert!((a.to_the_power_of(5) * b) == FieldElement::new(16, 31));
+        let a = FieldElement::new(5u64.into(), 31u64.into());
+        let b = FieldElement::new(18u64.into(), 31u64.into());
+        assert!(
+            (a.to_the_power_of(5u64.into()) * b) == FieldElement::new(16u64.into(), 31u64.into())
+        );
     }
 
     #[test]
     fn div_works() {
-        let a = FieldElement::new(2, 19);
-        let b = FieldElement::new(7, 19);
-        let c = FieldElement::new(3, 19);
+        let a = FieldElement::new(2u64.into(), 19u64.into());
+        let b = FieldElement::new(7u64.into(), 19u64.into());
+        let c = FieldElement::new(3u64.into(), 19u64.into());
         assert!(c == a / b)
     }
 }
