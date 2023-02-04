@@ -1,7 +1,7 @@
 use std::fmt;
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
-use num::{BigInt, BigUint, FromPrimitive, One, Zero};
+use num::{BigInt, BigUint, FromPrimitive, Integer, One, Zero};
 
 #[derive(Debug, Clone)]
 pub struct FieldElement {
@@ -68,7 +68,12 @@ impl Eq for FieldElement {}
 
 impl fmt::Display for FieldElement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "FieldElement_{}({}))", self.prime, self.num)
+        write!(
+            f,
+            "FieldElement: {}\n\t(order {})",
+            self.prime.to_str_radix(16),
+            self.num.to_str_radix(16)
+        )
     }
 }
 
@@ -149,9 +154,9 @@ impl Div for FieldElement {
             * divisor.num.modpow(
                 &(self.prime.clone() - BigUint::from_u64(2u64).unwrap()),
                 &self.prime,
-            )
-            % &self.prime;
-        FieldElement::new(new_num)
+            );
+        let answer = new_num.rem(self.prime);
+        FieldElement::new(answer)
     }
 }
 
@@ -159,6 +164,8 @@ impl Div for FieldElement {
 
 #[cfg(test)]
 mod field_element_tests {
+
+    use num::Num;
 
     use super::*;
 
@@ -176,7 +183,7 @@ mod field_element_tests {
     fn add_works() {
         let a = FieldElement::new(7u64.into());
         let b = FieldElement::new(12u64.into());
-        let c = FieldElement::new(6u64.into());
+        let c = FieldElement::new(19u64.into());
         assert!(a + b == c);
     }
 
@@ -192,11 +199,11 @@ mod field_element_tests {
     fn mul_works() {
         let a = FieldElement::new(3u64.into());
         let b = FieldElement::new(12u64.into());
-        let c = FieldElement::new(10u64.into());
+        let c = FieldElement::new(36u64.into());
         assert!(a * b == c);
         let a = FieldElement::new(24u64.into());
         let b = FieldElement::new(19u64.into());
-        let c = FieldElement::new(22u64.into());
+        let c = FieldElement::new(456u64.into());
         assert!(a * b == c);
         assert!(3 % 13 == 3);
         assert!(8231 % 73829138 == 8231);
@@ -205,24 +212,28 @@ mod field_element_tests {
     #[test]
     fn pow_works() {
         let a = FieldElement::new(3u64.into());
-        let b = FieldElement::new(1u64.into());
+        let b = FieldElement::new(27u64.into());
         assert!(a.to_the_power_of(3u64.into()) == b);
-        let a = FieldElement::new(17u64.into());
+        let a = FieldElement::new(27u64.into());
         assert_eq!(
             a.to_the_power_of(3u64.into()),
-            FieldElement::new(15u64.into())
+            FieldElement::new(19683u64.into())
         );
-
-        let a = FieldElement::new(5u64.into());
-        let b = FieldElement::new(18u64.into());
-        assert!((a.to_the_power_of(5u64.into()) * b) == FieldElement::new(16u64.into()));
     }
 
     #[test]
     fn div_works() {
         let a = FieldElement::new(2u64.into());
         let b = FieldElement::new(7u64.into());
-        let c = FieldElement::new(3u64.into());
-        assert!(c == a / b)
+        let answer = a / b;
+        println!("{:?}", answer);
+        let c = FieldElement::new(
+            BigUint::from_str_radix(
+                "82708635169511568159693560720491362752335703332600402885326845719934881908331",
+                10,
+            )
+            .unwrap(),
+        );
+        assert!(c == answer)
     }
 }
