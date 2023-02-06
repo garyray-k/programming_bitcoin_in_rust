@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
-use num::{BigInt, BigUint, FromPrimitive, Integer, One, Zero};
+use num::{BigInt, BigUint, FromPrimitive, One, Zero};
 
 #[derive(Debug, Clone)]
 pub struct FieldElement {
@@ -68,12 +68,7 @@ impl Eq for FieldElement {}
 
 impl fmt::Display for FieldElement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "FieldElement: {}\n\t(order {})",
-            self.prime.to_str_radix(16),
-            self.num.to_str_radix(16)
-        )
+        write!(f, "Secp256k1FieldElement: {:64}", self.num.to_str_radix(16))
     }
 }
 
