@@ -1,9 +1,35 @@
 use std::fmt;
 use std::ops::{Add, AddAssign, BitAnd, Shr};
 
-use num::{BigUint, One, Zero};
+use num::{BigUint, Num, One, Zero};
 
 use super::field_element::FieldElement;
+use super::signature::Signature;
+
+fn n() -> BigUint {
+    BigUint::from_str_radix(
+        "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+        16,
+    )
+    .unwrap()
+}
+
+fn generator_point() -> Secp256k1Point {
+    let generator_x = BigUint::from_str_radix(
+        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        16,
+    )
+    .unwrap();
+    let generator_y = BigUint::from_str_radix(
+        "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
+        16,
+    )
+    .unwrap();
+    let x = FieldElement::new(generator_x);
+    let y = FieldElement::new(generator_y);
+
+    Secp256k1Point::new(Some(x), Some(y))
+}
 
 #[derive(Clone, Debug)]
 struct Secp256k1Point {
@@ -51,6 +77,15 @@ impl Secp256k1Point {
 
     fn infinity_point() -> Secp256k1Point {
         Secp256k1Point::new(None, None)
+    }
+
+    pub fn verify(self, z: BigUint, signature: Signature) -> bool {
+        let order_minus_two = n() - BigUint::from(2u64);
+        let s_inv = signature.s().modpow(&order_minus_two, &n());
+        let mut u = (z * &s_inv) % n();
+        let mut v = (signature.r() * s_inv) % n();
+        let total = generator_point().multiply_by(&mut u) + self.multiply_by(&mut v);
+        total.x.unwrap().get_number() == *signature.r()
     }
 }
 
@@ -133,7 +168,7 @@ mod point_tests {
 
     use std::ops::Mul;
 
-    use num::{BigInt, FromPrimitive, Num, One};
+    use num::{FromPrimitive, Num, One};
 
     use super::*;
 
@@ -180,23 +215,6 @@ mod point_tests {
         )
     }
 
-    fn generator_point() -> Secp256k1Point {
-        let generator_x = BigUint::from_str_radix(
-            "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-            16,
-        )
-        .unwrap();
-        let generator_y = BigUint::from_str_radix(
-            "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
-            16,
-        )
-        .unwrap();
-        let x = FieldElement::new(generator_x);
-        let y = FieldElement::new(generator_y);
-
-        Secp256k1Point::new(Some(x), Some(y))
-    }
-
     #[test]
     fn verify_signature() {
         let z = BigUint::from_str_radix(
@@ -225,49 +243,112 @@ mod point_tests {
         )
         .unwrap();
         let point = Secp256k1Point::new(Some(FieldElement::new(px)), Some(FieldElement::new(py)));
-        let secp256k1_prime =
-            BigUint::from(2u64).pow(256) - BigUint::from(2u64).pow(32) - BigUint::from(977u64);
-        let other_prime = BigUint::from_str_radix(
-            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F",
-            16,
-        )
-        .unwrap();
-        assert_eq!(secp256k1_prime, other_prime);
-        let s_inv = s.modpow(&(&secp256k1_prime - BigUint::from(2u64)), &secp256k1_prime);
-        let mut u = (z * &s_inv) % &secp256k1_prime;
-        let mut v = (&r * s_inv) % secp256k1_prime;
-        assert_eq!(
-            ((generator_point().multiply_by(&mut u)) + (point.multiply_by(&mut v)))
-                .x
-                .unwrap()
-                .get_number()
-                .to_str_radix(16),
-            r.to_str_radix(16)
-        )
+        let signature = Signature::new(r, s);
+        assert!(point.verify(z, signature))
     }
 
     #[test]
     fn generator_point_test() {
-        let prime = BigInt::from_str_radix(
+        let prime = BigUint::from_str_radix(
             "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F",
             16,
         )
         .unwrap();
-        let x = BigInt::from_str_radix(
+        let x = BigUint::from_str_radix(
             "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
             16,
         )
         .unwrap();
-        let y = BigInt::from_str_radix(
+        let y = BigUint::from_str_radix(
             "483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8",
             16,
         )
         .unwrap();
         assert_eq!(
-            BigInt::zero(),
-            ((y.clone().mul(y)) - (x.clone().mul(x.clone()).mul(x)) - BigInt::from_u32(7).unwrap())
+            BigUint::zero(),
+            ((y.clone().mul(y))
+                - (x.clone().mul(x.clone()).mul(x))
+                - BigUint::from_u32(7).unwrap())
                 % prime
         )
+    }
+
+    #[test]
+    fn chapter_3_exercise_6() {
+        let public_key = Secp256k1Point::new(
+            Some(FieldElement::new(
+                BigUint::from_str_radix(
+                    "887387e452b8eacc4acfde10d9aaf7f6d9a0f975aabb10d006e4da568744d06c",
+                    16,
+                )
+                .unwrap(),
+            )),
+            Some(FieldElement::new(
+                BigUint::from_str_radix(
+                    "61de6d95231cd89026e286df3b6ae4a894a3378e393e93a0f45b666329a0ae34",
+                    16,
+                )
+                .unwrap(),
+            )),
+        );
+
+        // # signature 1
+        let z = BigUint::from_str_radix(
+            "ec208baa0fc1c19f708a9ca96fdeff3ac3f230bb4a7ba4aede4942ad003c0f60",
+            16,
+        )
+        .unwrap();
+        let r = BigUint::from_str_radix(
+            "ac8d1c87e51d0d441be8b3dd5b05c8795b48875dffe00b7ffcfac23010d3a395",
+            16,
+        )
+        .unwrap();
+        let s = BigUint::from_str_radix(
+            "68342ceff8935ededd102dd876ffd6ba72d6a427a3edb13d26eb0781cb423c4",
+            16,
+        )
+        .unwrap();
+        let order_minus_two = n() - BigUint::from(2u64);
+        let s_inv = s.modpow(&order_minus_two, &n());
+        let mut u = (z * &s_inv) % n();
+        let mut v = (&r * s_inv) % n();
+        assert_eq!(
+            ((generator_point().multiply_by(&mut u)) + (public_key.clone().multiply_by(&mut v)))
+                .x
+                .unwrap()
+                .get_number()
+                .to_str_radix(16),
+            r.to_str_radix(16)
+        );
+
+        // signature 2
+        let z = BigUint::from_str_radix(
+            "7c076ff316692a3d7eb3c3bb0f8b1488cf72e1afcd929e29307032997a838a3d",
+            16,
+        )
+        .unwrap();
+        let r = BigUint::from_str_radix(
+            "eff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c",
+            16,
+        )
+        .unwrap();
+        let s = BigUint::from_str_radix(
+            "c7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab6",
+            16,
+        )
+        .unwrap();
+        let order_minus_two = n() - BigUint::from(2u64);
+        let s_inv = s.modpow(&order_minus_two, &n());
+        let mut u = (z * &s_inv) % n();
+        let mut v = (&r * s_inv) % n();
+        assert_eq!(
+            ((generator_point().multiply_by(&mut u)) + (public_key.multiply_by(&mut v)))
+                .x
+                .unwrap()
+                .get_number()
+                .to_str_radix(16),
+            r.to_str_radix(16)
+        );
     }
 
     // Assuming the previous tests pass, our code functions as expected

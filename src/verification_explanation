@@ -3,6 +3,7 @@ STATIC:
 e = private key (single 256-bit number)
 P = Public key (x,y coordinate, each 256bit)
 e * G = P where G is the generator point of secp256k1
+n = order of the curve, NOT THE PRIME!
 
 SIGNATURE-RELATED:
 
