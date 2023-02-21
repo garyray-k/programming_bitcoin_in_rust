@@ -131,7 +131,9 @@ impl Eq for Secp256k1Point {}
 #[cfg(test)]
 mod point_tests {
 
-    use num::{FromPrimitive, Num, One};
+    use std::ops::Mul;
+
+    use num::{BigInt, FromPrimitive, Num, One};
 
     use super::*;
 
@@ -225,15 +227,46 @@ mod point_tests {
         let point = Secp256k1Point::new(Some(FieldElement::new(px)), Some(FieldElement::new(py)));
         let secp256k1_prime =
             BigUint::from(2u64).pow(256) - BigUint::from(2u64).pow(32) - BigUint::from(977u64);
+        let other_prime = BigUint::from_str_radix(
+            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F",
+            16,
+        )
+        .unwrap();
+        assert_eq!(secp256k1_prime, other_prime);
         let s_inv = s.modpow(&(&secp256k1_prime - BigUint::from(2u64)), &secp256k1_prime);
-        let mut u = z * &s_inv % &secp256k1_prime;
-        let mut v = &r * s_inv % secp256k1_prime;
+        let mut u = (z * &s_inv) % &secp256k1_prime;
+        let mut v = (&r * s_inv) % secp256k1_prime;
         assert_eq!(
-            (generator_point().multiply_by(&mut u) + point.multiply_by(&mut v))
+            ((generator_point().multiply_by(&mut u)) + (point.multiply_by(&mut v)))
                 .x
                 .unwrap()
-                .get_number(),
-            r
+                .get_number()
+                .to_str_radix(16),
+            r.to_str_radix(16)
+        )
+    }
+
+    #[test]
+    fn generator_point_test() {
+        let prime = BigInt::from_str_radix(
+            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F",
+            16,
+        )
+        .unwrap();
+        let x = BigInt::from_str_radix(
+            "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
+            16,
+        )
+        .unwrap();
+        let y = BigInt::from_str_radix(
+            "483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8",
+            16,
+        )
+        .unwrap();
+        assert_eq!(
+            BigInt::zero(),
+            ((y.clone().mul(y)) - (x.clone().mul(x.clone()).mul(x)) - BigInt::from_u32(7).unwrap())
+                % prime
         )
     }
 
