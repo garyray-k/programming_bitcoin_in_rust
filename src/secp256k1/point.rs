@@ -166,6 +166,19 @@ mod point_tests {
 
     #[test]
     fn verify_generator_point_has_order_n() {
+        let generator_point = generator_point();
+        let mut n = BigUint::from_str_radix(
+            "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+            16,
+        )
+        .unwrap();
+        assert_eq!(
+            generator_point.multiply_by(&mut n),
+            Secp256k1Point::infinity_point()
+        )
+    }
+
+    fn generator_point() -> Secp256k1Point {
         let generator_x = BigUint::from_str_radix(
             "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
             16,
@@ -176,18 +189,51 @@ mod point_tests {
             16,
         )
         .unwrap();
-        let mut order = BigUint::from_str_radix(
-            "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
-            16,
-        )
-        .unwrap();
         let x = FieldElement::new(generator_x);
         let y = FieldElement::new(generator_y);
 
-        let generator_point = Secp256k1Point::new(Some(x), Some(y));
+        Secp256k1Point::new(Some(x), Some(y))
+    }
+
+    #[test]
+    fn verify_signature() {
+        let z = BigUint::from_str_radix(
+            "bc62d4b80d9e36da29c16c5d4d9f11731f36052c72401a76c23c0fb5a9b74423",
+            16,
+        )
+        .unwrap();
+        let r = BigUint::from_str_radix(
+            "37206a0610995c58074999cb9767b87af4c4978db68c06e8e6e81d282047a7c6",
+            16,
+        )
+        .unwrap();
+        let s = BigUint::from_str_radix(
+            "8ca63759c1157ebeaec0d03cecca119fc9a75bf8e6d0fa65c841c8e2738cdaec",
+            16,
+        )
+        .unwrap();
+        let px = BigUint::from_str_radix(
+            "04519fac3d910ca7e7138f7013706f619fa8f033e6ec6e09370ea38cee6a7574",
+            16,
+        )
+        .unwrap();
+        let py = BigUint::from_str_radix(
+            "82b51eab8c27c66e26c858a079bcdf4f1ada34cec420cafc7eac1a42216fb6c4",
+            16,
+        )
+        .unwrap();
+        let point = Secp256k1Point::new(Some(FieldElement::new(px)), Some(FieldElement::new(py)));
+        let secp256k1_prime =
+            BigUint::from(2u64).pow(256) - BigUint::from(2u64).pow(32) - BigUint::from(977u64);
+        let s_inv = s.modpow(&(&secp256k1_prime - BigUint::from(2u64)), &secp256k1_prime);
+        let mut u = z * &s_inv % &secp256k1_prime;
+        let mut v = &r * s_inv % secp256k1_prime;
         assert_eq!(
-            generator_point.multiply_by(&mut order),
-            Secp256k1Point::infinity_point()
+            (generator_point().multiply_by(&mut u) + point.multiply_by(&mut v))
+                .x
+                .unwrap()
+                .get_number(),
+            r
         )
     }
 
